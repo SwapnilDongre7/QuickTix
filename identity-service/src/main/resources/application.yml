@@ -2,10 +2,14 @@ server:
   port: 8081
 
 spring:
+  application:
+    name: IDENTITY-SERVICE
+
   datasource:
     url: jdbc:mysql://localhost:3306/identity_service
     username: root
     password: Swap@2003
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -13,6 +17,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
 jwt:
   secret: my-super-secure-secret-key-1234567890
