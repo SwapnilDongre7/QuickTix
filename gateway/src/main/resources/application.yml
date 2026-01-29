@@ -1,0 +1,88 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: GATEWAY
+
+  cloud:
+    gateway:
+      routes:
+        # Identity Service - Authentication
+        - id: identity-service
+          uri: lb://IDENTITY-SERVICE
+          predicates:
+            - Path=/auth/**
+
+        # Catalogue Service - Movies, Cities, Genres, Languages
+        - id: catalogue-service
+          uri: lb://CATALOGUE-SERVICE
+          predicates:
+            - Path=/movies/**,/cities/**,/genres/**,/languages/**
+
+        # Theatre Management Service
+        - id: theatre-service
+          uri: lb://THEATRE-SERVICE
+          predicates:
+            - Path=/theatres/**,/screens/**,/owners/**
+
+        # ShowSeat Service - Shows and Seat Management
+        - id: showseat-service
+          uri: lb://SHOWSEAT-SERVICE
+          predicates:
+            - Path=/api/shows/**,/api/show-seat/**,/seats/**,/layouts/**,/seat-availability/**
+
+        # Booking Service
+        - id: booking-service
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/bookings/**
+
+        # Payment Service
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payments/**
+
+      # Global CORS configuration
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:my-super-secure-secret-key-1234567890}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.ticketbooking.gateway: DEBUG

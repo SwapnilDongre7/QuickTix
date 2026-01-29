@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: identity-service
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/identity_service}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8081
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:my-super-secure-secret-key-1234567890}
+  expiration: 86400000
+
+management:
+  tracing:
+    enabled: false   # disable until Zipkin is running
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.ticketbooking.identity: DEBUG
