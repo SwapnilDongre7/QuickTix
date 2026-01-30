@@ -39,6 +39,15 @@ public class SecurityConfig {
                                 .requestMatchers("/owners/approve/**").hasRole("ADMIN")
                                 .requestMatchers("/owners/reject/**").hasRole("ADMIN")
 
+                                // Public Theatre & Screen Access
+                                .requestMatchers(HttpMethod.GET, "/theatres/active/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/theatres/city/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/theatres/owner/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/screens/active/**").permitAll()
+                                // Public Owner Profile Access
+                                .requestMatchers(HttpMethod.GET, "/owners/{ownerId}").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/owners/user/{userId}").permitAll()
+
                                 // Secure Status Updates
                                 .requestMatchers(HttpMethod.PUT, "/theatres/status")
                                 .hasAnyRole("ADMIN", "THEATRE_OWNER")

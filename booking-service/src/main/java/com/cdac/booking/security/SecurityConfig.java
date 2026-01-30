@@ -23,10 +23,13 @@ public class SecurityConfig {
 
 		http.csrf(csrf -> csrf.disable())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/bookings/payment-status", // payment → booking
-																								// callback
-						"/bookings", // Allow creating bookings publicly for testing
-						"/health").permitAll().anyRequest().authenticated());
+				.authorizeHttpRequests(auth -> auth
+						// Internal callback from payment-service (must be public)
+						.requestMatchers("/bookings/payment-status").permitAll()
+						// Health check endpoint
+						.requestMatchers("/health", "/actuator/**").permitAll()
+						// Booking creation requires authentication
+						.anyRequest().authenticated());
 
 		http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

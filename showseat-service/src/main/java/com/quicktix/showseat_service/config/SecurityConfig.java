@@ -44,7 +44,10 @@ public class SecurityConfig {
 						// Actuator endpoints
 						.requestMatchers("/actuator/**").permitAll()
 						// Public GET access for show browsing
-						.requestMatchers(HttpMethod.GET, "/shows/**").permitAll()
+						// Public GET access for show browsing
+						.requestMatchers(HttpMethod.GET, "/api/shows/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/layouts/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/seat-availability/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/pricing/**").permitAll()
 						// All other endpoints require authentication
 						.anyRequest().authenticated());

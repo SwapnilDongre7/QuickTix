@@ -95,7 +95,24 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return path.startsWith("/auth/login")
                 || path.startsWith("/auth/register")
                 || path.startsWith("/actuator")
-                || path.startsWith("/payments/webhook"); // Razorpay webhooks don't have JWT
+                || path.startsWith("/payments/webhook") // Razorpay webhooks don't have JWT
+                // Catalogue - Public browsing
+                || path.startsWith("/movies")
+                || path.startsWith("/cities")
+                || path.startsWith("/genres")
+                || path.startsWith("/languages")
+                // Theatre - Public browsing
+                || path.startsWith("/theatres/active")
+                || path.startsWith("/theatres/city")
+                || path.startsWith("/theatres/owner")
+                || path.startsWith("/screens/active")
+                || path.matches("/owners/\\d+") // Owner profile by ID
+                || path.matches("/owners/user/\\d+") // Owner profile by user ID
+                // ShowSeat - Public browsing
+                || path.startsWith("/api/shows")
+                || path.startsWith("/layouts")
+                || path.startsWith("/seat-availability")
+                || path.startsWith("/api/show-seat/pricing"); // Pricing info
     }
 
     @Override

@@ -1,9 +1,9 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: GATEWAY
+
+  main:
+    web-application-type: reactive
 
   cloud:
     gateway:
@@ -44,19 +44,10 @@ spring:
           predicates:
             - Path=/payments/**
 
-      # Global CORS configuration
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders: "*"
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
 
 eureka:
   client:
@@ -68,16 +59,18 @@ eureka:
 jwt:
   secret: ${JWT_SECRET:my-super-secure-secret-key-1234567890}
 
-# Actuator
+# Actuator & Observability
 management:
   endpoints:
     web:
       exposure:
         include: health,info,gateway
+
   tracing:
-    enabled: true
+    enabled: false   # disable Zipkin noise by default
     sampling:
       probability: 1.0
+
   zipkin:
     tracing:
       endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}

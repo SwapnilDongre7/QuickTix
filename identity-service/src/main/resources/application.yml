@@ -3,10 +3,16 @@ spring:
     name: identity-service
 
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/identity_service}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:mysql://mysql-1da53c24-dongreswapnil003-49d6.d.aivencloud.com:27516/identity_service?sslMode=REQUIRED
+    username: avnadmin
+    password: ${DB_PASSWORD:password_placeholder}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 600000
 
   jpa:
     hibernate:
@@ -33,7 +39,7 @@ jwt:
 
 management:
   tracing:
-    enabled: false   # disable until Zipkin is running
+    enabled: false
   endpoints:
     web:
       exposure:
