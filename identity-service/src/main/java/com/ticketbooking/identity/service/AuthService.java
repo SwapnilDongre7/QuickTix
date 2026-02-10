@@ -25,11 +25,11 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthService(UserRepository userRepository,
-                       RoleRepository roleRepository,
-                       UserRoleRepository userRoleRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil,
-                       AuthenticationManager authenticationManager) {
+            RoleRepository roleRepository,
+            UserRoleRepository userRoleRepository,
+            PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil,
+            AuthenticationManager authenticationManager) {
 
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -41,24 +41,22 @@ public class AuthService {
 
     public void register(RegisterRequest request) {
 
-    	if (userRepository.existsByEmail(request.getEmail())) {
-    	    throw new UserAlreadyExistsException("Email already exists");
-    	}
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new UserAlreadyExistsException("Email already exists");
+        }
 
         User user = new User(
                 request.getName(),
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()),
-                request.getPhone()
-        );
+                request.getPhone());
 
         user = userRepository.save(user);
 
-        Role.RoleName roleName = Role.RoleName.valueOf(request.getRole());
+        // Always default to USER role - admin-controlled upgrades only
+        Role.RoleName roleName = Role.RoleName.USER;
         Role role = roleRepository.findByRoleName(roleName)
-        		.orElseThrow(() -> new RoleNotFoundException("Role not found"));
-
-
+                .orElseThrow(() -> new RoleNotFoundException("Role not found"));
 
         UserRole userRole = new UserRole();
         userRole.setUser(user);
@@ -72,11 +70,9 @@ public class AuthService {
 
         try {
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
-                    request.getPassword()
-                )
-            );
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
         } catch (BadCredentialsException e) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
@@ -85,9 +81,7 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         List<String> roles = new ArrayList<>();
-        user.getUserRoles().forEach(ur -> 
-            roles.add(ur.getRole().getRoleName().name())
-        );
+        user.getUserRoles().forEach(ur -> roles.add(ur.getRole().getRoleName().name()));
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", roles);
@@ -106,16 +100,47 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         List<String> roles = new ArrayList<>();
-        user.getUserRoles().forEach(ur ->
-                roles.add(ur.getRole().getRoleName().name())
-        );
+        user.getUserRoles().forEach(ur -> roles.add(ur.getRole().getRoleName().name()));
 
         return new TokenValidationResponse(
                 user.getId(),
                 user.getEmail(),
                 roles,
-                true
-        );
+                true);
     }
 
+    public void addRoleToUser(Long userId, String roleName) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Role.RoleName roleEnum = Role.RoleName.valueOf(roleName);
+        Role role = roleRepository.findByRoleName(roleEnum)
+                .orElseThrow(() -> new RoleNotFoundException("Role not found"));
+
+        boolean alreadyHasRole = user.getUserRoles().stream()
+                .anyMatch(ur -> ur.getRole().getRoleName() == roleEnum);
+
+        if (alreadyHasRole) {
+            return; // Idempotent
+        }
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(user);
+        userRole.setRole(role);
+        userRole.setId(new UserRoleId(user.getId(), role.getId()));
+
+        userRoleRepository.save(userRole);
+    }
+
+    /**
+     * Get user info by ID.
+     * 
+     * @param userId User ID
+     * @return UserInfoResponse with name and email
+     */
+    public UserInfoResponse getUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + userId));
+        return new UserInfoResponse(user.getId(), user.getName(), user.getEmail());
+    }
 }
