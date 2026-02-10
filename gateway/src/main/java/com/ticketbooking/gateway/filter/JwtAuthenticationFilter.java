@@ -4,14 +4,32 @@ import com.ticketbooking.gateway.security.JwtUtil;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+/**
+ * JWT Authentication Filter for API Gateway
+ * 
+ * This filter performs the following:
+ * 1. Validates the JWT token
+ * 2. Extracts user information (userId, roles, email)
+ * 3. Forwards user info via headers to downstream services
+ * 
+ * By doing this, downstream services don't need to re-validate the JWT.
+ * They can trust the headers from the Gateway.
+ */
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+
+    // Header names for forwarding user info
+    public static final String HEADER_USER_ID = "X-User-Id";
+    public static final String HEADER_USER_ROLES = "X-User-Roles";
+    public static final String HEADER_USER_EMAIL = "X-User-Email";
+    public static final String HEADER_AUTH_VALIDATED = "X-Auth-Validated";
 
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -19,12 +37,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange,
-                             org.springframework.cloud.gateway.filter.GatewayFilterChain chain) {
+            org.springframework.cloud.gateway.filter.GatewayFilterChain chain) {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // Allow login & register
-        if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
+        // Allow public endpoints without authentication
+        if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
         }
 
@@ -38,16 +56,63 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
-        
+
         if (!jwtUtil.validateToken(token)) {
-        	System.out.println("Invalid token detected at Gateway");
+            System.out.println("Invalid token detected at Gateway");
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
-        
+
         System.out.println("Valid token passed Gateway validation");
 
-        return chain.filter(exchange);
+        // Extract user information from JWT
+        String userId = jwtUtil.extractUserId(token);
+        String roles = jwtUtil.extractRoles(token);
+        String email = jwtUtil.extractEmail(token);
+
+        // Build mutated request with user info headers
+        ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                .header(HEADER_AUTH_VALIDATED, "true")
+                .header(HEADER_USER_ID, userId != null ? userId : "")
+                .header(HEADER_USER_ROLES, roles != null ? roles : "")
+                .header(HEADER_USER_EMAIL, email != null ? email : "")
+                .build();
+
+        // Create new exchange with mutated request
+        ServerWebExchange mutatedExchange = exchange.mutate()
+                .request(mutatedRequest)
+                .build();
+
+        System.out.println("Forwarding request with headers - UserId: " + userId + ", Roles: " + roles);
+
+        return chain.filter(mutatedExchange);
+    }
+
+    /**
+     * Check if the endpoint is public (doesn't require authentication)
+     */
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/auth/login")
+                || path.startsWith("/auth/register")
+                || path.startsWith("/actuator")
+                || path.startsWith("/payments/webhook") // Razorpay webhooks don't have JWT
+                || path.startsWith("/ws/") // WebSocket handshakes
+                // Catalogue - Public browsing
+                || path.startsWith("/movies")
+                || path.startsWith("/cities")
+                || path.startsWith("/genres")
+                || path.startsWith("/languages")
+                // Theatre - Public browsing (only active theatres, not by owner)
+                || path.startsWith("/theatres/active")
+                || path.startsWith("/theatres/city")
+                || path.startsWith("/screens/active")
+                || path.matches("/owners/\\d+") // Owner profile by ID
+                || path.matches("/owners/user/\\d+") // Owner profile by user ID
+                // ShowSeat - Public browsing (GET operations only enforced at service level)
+                || path.startsWith("/api/shows")
+                || path.startsWith("/layouts")
+                || path.startsWith("/seat-availability")
+                || path.startsWith("/api/show-seat/pricing"); // Pricing info
     }
 
     @Override
